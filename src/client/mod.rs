@@ -93,17 +93,13 @@ pub fn build_client() -> WMClient {
 
 #[cfg(not(any(
     feature = "gnome",
-    feature = "sway",
     feature = "x11",
-    feature = "hypr",
     feature = "kde"
 )))]
 mod null_client;
 #[cfg(not(any(
     feature = "gnome",
-    feature = "sway",
     feature = "x11",
-    feature = "hypr",
     feature = "kde",
     feature = "wlroots"
 )))]
