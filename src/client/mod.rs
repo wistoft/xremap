@@ -5,6 +5,7 @@ pub trait Client {
 }
 
 pub struct WMClient {
+    #[allow(dead_code)]
     name: String,
     client: Box<dyn Client>,
     supported: Option<bool>,
