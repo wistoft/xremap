@@ -28,7 +28,7 @@ pub const DISGUISED_EVENT_OFFSETTER: u16 = 59974;
 
 pub struct EventHandler {
     // Currently pressed modifier keys
-    modifiers: HashSet<Key>,
+    modifiers: Vec<Key>,
     // Modifiers that are currently pressed but not in the source KeyPress
     extra_modifiers: HashSet<Key>,
     // Make sure the original event is released even if remapping changes while holding the key
@@ -65,7 +65,7 @@ struct TaggedAction {
 impl EventHandler {
     pub fn new(timer: TimerFd, mode: &str, keypress_delay: Duration, application_client: WMClient) -> EventHandler {
         EventHandler {
-            modifiers: HashSet::new(),
+            modifiers: vec![],
             extra_modifiers: HashSet::new(),
             pressed_keys: HashMap::new(),
             application_client,
@@ -711,9 +711,9 @@ impl EventHandler {
 
     fn update_modifier(&mut self, key: Key, value: i32) {
         if value == PRESS {
-            self.modifiers.insert(key);
+            self.modifiers.push(key);
         } else if value == RELEASE {
-            self.modifiers.remove(&key);
+            self.modifiers.retain(|&x| x != key);
         }
     }
 }
