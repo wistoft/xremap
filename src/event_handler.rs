@@ -808,9 +808,9 @@ fn is_pressed(value: i32) -> bool {
 }
 
 // InputEvent#value
-static RELEASE: i32 = 0;
-static PRESS: i32 = 1;
-static REPEAT: i32 = 2;
+pub static RELEASE: i32 = 0;
+pub static PRESS: i32 = 1;
+pub static REPEAT: i32 = 2;
 
 // ---
 
