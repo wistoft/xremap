@@ -1,0 +1,149 @@
+name: cargo
+on:
+  push:
+    # branches:
+    #   - master
+    #   - feature*
+    # tags:
+    #   - v*
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+  # schedule:
+  #   - cron: '00 15 * * *' # 7:00 PST (-8), 8:00 PDT (-7)
+env:
+  CARGO_TERM_COLOR: always
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, aarch64]
+        feature: [x11, gnome, kde, wlroots]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+          target: ${{ matrix.arch }}-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ubuntu-latest-${{ matrix.arch }}-${{ matrix.feature }}
+
+      - run: cargo install cross
+      - name: cross build
+        run: cross build --release --features ${{ matrix.feature }} --target=${{ matrix.arch }}-unknown-linux-musl
+
+      - name: package
+        run: zip "xremap-linux-${{ matrix.arch }}-${{ matrix.feature }}.zip" xremap
+        working-directory: target/${{ matrix.arch }}-unknown-linux-musl/release
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: xremap-${{ matrix.arch }}-${{ matrix.feature }}
+          path: target/${{ matrix.arch }}-unknown-linux-musl/release/xremap-linux-${{ matrix.arch }}-${{ matrix.feature }}.zip
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: Swatinem/rust-cache@v1
+        with:
+          key: ubuntu-latest
+      - run: cargo test
+
+  # Release xremap binaries on GitHub
+  release:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - test
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      # Fetch x86_64 binary
+      - {
+          uses: actions/download-artifact@v3,
+          with: { name: xremap-x86_64-x11, path: package/ },
+        }
+      - {
+          uses: actions/download-artifact@v3,
+          with: { name: xremap-x86_64-gnome, path: package/ },
+        }
+      - {
+          uses: actions/download-artifact@v3,
+          with: { name: xremap-x86_64-kde, path: package/ },
+        }
+      - {
+          uses: actions/download-artifact@v3,
+          with: { name: xremap-x86_64-wlroots, path: package/ },
+        }
+
+      # Fetch aarch64 binary
+      - {
+          uses: actions/download-artifact@v3,
+          with: { name: xremap-aarch64-x11, path: package/ },
+        }
+      - {
+          uses: actions/download-artifact@v3,
+          with: { name: xremap-aarch64-gnome, path: package/ },
+        }
+      - {
+          uses: actions/download-artifact@v3,
+          with: { name: xremap-aarch64-kde, path: package/ },
+        }
+      - {
+          uses: actions/download-artifact@v3,
+          with: { name: xremap-aarch64-wlroots, path: package/ },
+        }
+
+      # Release binary
+      - name: Release
+        run: |
+          export VERSION=$(echo "$GITHUB_REF" | sed -e 's!refs/tags/!!')
+          curl -L "https://github.com/tcnksm/ghr/releases/download/${GHR_VERSION}/ghr_${GHR_VERSION}_linux_amd64.tar.gz" | tar xvz
+          "ghr_${GHR_VERSION}_linux_amd64/ghr" -u xremap -r xremap -replace -n "$VERSION" "$VERSION" package/
+        env:
+          GHR_VERSION: v0.16.2
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Publish xremap to crates.io
+  publish:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - test
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: Swatinem/rust-cache@v1
+        with:
+          key: ubuntu-latest
+
+      # Release crate
+      - name: cargo login
+        run: cargo login "$CARGO_TOKEN"
+        env:
+          CARGO_TOKEN: ${{ secrets.CARGO_TOKEN }}
+      - run: cargo publish
