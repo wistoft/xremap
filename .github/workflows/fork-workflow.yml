@@ -1,4 +1,4 @@
-name: cargo
+name: forked workflow
 on:
   push:
     # branches:
@@ -37,7 +37,7 @@ jobs:
 
       - run: cargo install cross
       - name: cross build
-        run: cross build --release --features ${{ matrix.feature }} --target=${{ matrix.arch }}-unknown-linux-musl
+        run: RUSTFLAGS="-Dwarnings" cross build --release --features ${{ matrix.feature }} --target=${{ matrix.arch }}-unknown-linux-musl
 
       - name: package
         run: zip "xremap-linux-${{ matrix.arch }}-${{ matrix.feature }}.zip" xremap
@@ -60,7 +60,7 @@ jobs:
       - uses: Swatinem/rust-cache@v1
         with:
           key: ubuntu-latest
-      - run: cargo test
+      - run: RUSTFLAGS="-Dwarnings" cargo test
 
   # Release xremap binaries on GitHub
   release:
