@@ -11,6 +11,7 @@ const KWIN_SCRIPT: &str = include_str!("kwin-script.js");
 const KWIN_SCRIPT_PLUGIN_NAME: &str = "xremap";
 
 pub struct KdeClient {
+    supported: Option<bool>,
     active_window: Arc<Mutex<ActiveWindow>>,
 }
 
@@ -126,7 +127,21 @@ impl KdeClient {
             res_name: String::new(),
             res_class: String::new(),
         }));
-        KdeClient { active_window }
+
+        let mut client = KdeClient {
+            active_window,
+            supported: None,
+        };
+
+        let conn_res = client.connect();
+
+        if let Err(err) = &conn_res {
+            warn!("Could not connect to KDE. Error: {err:?}");
+        }
+
+        client.supported = Some(conn_res.is_ok());
+
+        client
     }
 
     fn connect(&mut self) -> Result<(), ConnectionError> {
@@ -167,11 +182,7 @@ impl KdeClient {
 
 impl Client for KdeClient {
     fn supported(&mut self) -> bool {
-        let conn_res = self.connect();
-        if let Err(err) = &conn_res {
-            warn!("Could not connect to kwin-script. Error: {err:?}");
-        }
-        conn_res.is_ok()
+        self.supported.unwrap()
     }
     fn current_window(&mut self) -> Option<String> {
         let aw = self.active_window.lock().ok()?;
