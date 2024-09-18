@@ -17,3 +17,7 @@ if (workspace.windowList) {
     // kde 5
     workspace.clientActivated.connect(notifyActiveWindow);
 }
+
+//send info about current window
+
+notifyActiveWindow(workspace.activeClient);
