@@ -33,6 +33,7 @@ trait KWinScripting {
     fn load_script(&self, path: &Path) -> Result<i32, ConnectionError>;
     fn unload_script(&self) -> Result<bool, ConnectionError>;
     fn start_script(&self, script_obj_id: i32) -> Result<(), ConnectionError>;
+    #[allow(dead_code)]
     fn is_script_loaded(&self) -> Result<bool, ConnectionError>;
 }
 
@@ -97,26 +98,35 @@ impl KWinScripting for Connection {
     }
 }
 
+/// This must only be called when the dbus server is running, and ready to receive messages.
+///   Because the kwin script sends the current window information, when it starts.
 fn load_kwin_script() -> Result<(), ConnectionError> {
     let dbus = Connection::new_session().map_err(|_| ConnectionError::ClientSession)?;
-    if !dbus.is_script_loaded()? {
-        let init_script = || {
-            let temp_file_path = KwinScriptTempFile::new();
-            std::fs::write(&temp_file_path.0, KWIN_SCRIPT).map_err(|_| ConnectionError::WriteScriptToTempFile)?;
-            let script_obj_id = dbus.load_script(&temp_file_path.0)?;
-            dbus.start_script(script_obj_id)?;
-            Ok(())
-        };
-        if let Err(err) = init_script() {
-            debug!("Trying to unload kwin-script plugin ('{KWIN_SCRIPT_PLUGIN_NAME}').");
-            match dbus.unload_script() {
+
+    // Unload previous script
+
+    dbus.unload_script()?;
+
+    // Start new script
+
+    let init_script = || {
+        let temp_file_path = KwinScriptTempFile::new();
+        std::fs::write(&temp_file_path.0, KWIN_SCRIPT).map_err(|_| ConnectionError::WriteScriptToTempFile)?;
+        let script_obj_id = dbus.load_script(&temp_file_path.0)?;
+        dbus.start_script(script_obj_id)?;
+        Ok(())
+    };
+
+    if let Err(err) = init_script() {
+        debug!("Trying to unload kwin-script plugin ('{KWIN_SCRIPT_PLUGIN_NAME}').");
+        match dbus.unload_script() {
                 Err(err) => debug!("Error unloading plugin ('{err:?}'). It may still be loaded and could cause future runs of xremap to fail."),
                 Ok(unloaded) if unloaded => debug!("Successfully unloaded plugin."),
                 Ok(_) => debug!("Plugin was not loaded in the first place."),
             }
-            return Err(err);
-        }
+        return Err(err);
     }
+
     Ok(())
 }
 
@@ -145,8 +155,6 @@ impl KdeClient {
     }
 
     fn connect(&mut self) -> Result<(), ConnectionError> {
-        load_kwin_script()?;
-
         let active_window = Arc::clone(&self.active_window);
         let (tx, rx) = channel();
         std::thread::spawn(move || {
@@ -176,7 +184,12 @@ impl KdeClient {
                 Err(err) => tx.send(Err(err)),
             }
         });
-        rx.recv().unwrap()
+        rx.recv().unwrap()?;
+
+        // Load kwin script after server has started. To be sure the server gets
+        //  the output the kwin script sends when it starts.
+
+        load_kwin_script()
     }
 }
 
