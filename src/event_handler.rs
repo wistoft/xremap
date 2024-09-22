@@ -697,6 +697,13 @@ impl EventHandler {
 }
 
 fn is_remap(actions: &Vec<KeymapAction>) -> bool {
+    //this bug fix is a breaking changes where
+    //  f12: []
+    // previously emitted f12. Now it emits nothing, which might/might not be more expected.
+    if actions.len() == 0 {
+        return false;
+    }
+
     actions.iter().all(|x| match x {
         KeymapAction::Remap(..) => true,
         _ => false,
