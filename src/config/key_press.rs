@@ -54,16 +54,19 @@ fn parse_modifier(modifier: &str) -> Result<Modifier, Box<dyn Error>> {
     // Everything is case-insensitive
     match &modifier.to_uppercase()[..] {
         // Shift
+        "S" => Ok(Modifier::Shift),
         "SHIFT" => Ok(Modifier::Shift),
         // Control
         "C" => Ok(Modifier::Control),
         "CTRL" => Ok(Modifier::Control),
         "CONTROL" => Ok(Modifier::Control),
         // Alt
+        "A" => Ok(Modifier::Alt),
         "M" => Ok(Modifier::Alt),
         "ALT" => Ok(Modifier::Alt),
         // Windows
         "SUPER" => Ok(Modifier::Windows),
+        "W" => Ok(Modifier::Windows),
         "WIN" => Ok(Modifier::Windows),
         "WINDOWS" => Ok(Modifier::Windows),
         // else
