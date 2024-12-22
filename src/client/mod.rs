@@ -1,3 +1,5 @@
+use log::info;
+
 pub trait Client {
     fn supported(&mut self) -> bool;
     fn current_application(&mut self) -> Option<String>;
@@ -26,7 +28,7 @@ impl WMClient {
         if self.supported.is_none() {
             let supported = self.client.supported();
             self.supported = Some(supported);
-            println!("application-client: {} (supported: {})", self.name, supported);
+            info!("application-client: {} (supported: {})", self.name, supported);
         }
         if !self.supported.unwrap() {
             return None;
@@ -46,7 +48,7 @@ impl WMClient {
         if self.supported.is_none() {
             let supported = self.client.supported();
             self.supported = Some(supported);
-            println!("application-client: {} (supported: {})", self.name, supported);
+            info!("application-client: {} (supported: {})", self.name, supported);
         }
         if !self.supported.unwrap() {
             return None;
@@ -56,7 +58,7 @@ impl WMClient {
         if let Some(application) = &result {
             if &self.last_application != application {
                 self.last_application = application.clone();
-                println!("application: {}", application);
+                info!("application: {}", application);
             }
         }
         result
