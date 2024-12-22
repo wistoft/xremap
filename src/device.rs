@@ -5,7 +5,7 @@ use anyhow::bail;
 use derive_where::derive_where;
 use evdev::uinput::{VirtualDevice, VirtualDeviceBuilder};
 use evdev::{AttributeSet, BusType, Device, FetchEventsSynced, InputId, Key, RelativeAxisType};
-use log::debug;
+use log::{debug, info};
 use nix::sys::inotify::{AddWatchFlags, InitFlags, Inotify};
 use std::collections::HashMap;
 use std::error::Error;
@@ -89,24 +89,24 @@ pub fn get_input_devices(
     let mut devices: Vec<_> = InputDevice::devices()?.collect();
     devices.sort();
 
-    println!("Selecting devices from the following list:");
-    println!("{}", SEPARATOR);
+    info!("Selecting devices from the following list:");
+    info!("{}", SEPARATOR);
     devices.iter().for_each(InputDevice::print);
-    println!("{}", SEPARATOR);
+    info!("{}", SEPARATOR);
 
     if device_opts.is_empty() {
         if mouse {
-            print!("Selected keyboards and mice automatically since --device options weren't specified");
+            info!("Selected keyboards and mice automatically since --device options weren't specified");
         } else {
-            print!("Selected keyboards automatically since --device options weren't specified");
+            info!("Selected keyboards automatically since --device options weren't specified");
         }
     } else {
-        print!("Selected devices matching {:?}", device_opts);
+        info!("Selected devices matching {:?}", device_opts);
     };
     if ignore_opts.is_empty() {
-        println!(":")
+        info!(":")
     } else {
-        println!(", ignoring {:?}:", ignore_opts);
+        info!(", ignoring {:?}:", ignore_opts);
     }
 
     let devices: Vec<_> = devices
@@ -119,7 +119,7 @@ pub fn get_input_devices(
         })
         .collect();
 
-    println!("{}", SEPARATOR);
+    info!("{}", SEPARATOR);
     if devices.is_empty() {
         if watch {
             println!("warning: No device was selected, but --watch is waiting for new devices.");
@@ -129,7 +129,7 @@ pub fn get_input_devices(
     } else {
         devices.iter().for_each(InputDevice::print);
     }
-    println!("{}", SEPARATOR);
+    info!("{}", SEPARATOR);
 
     Ok(devices.into_iter().map(From::from).collect())
 }
@@ -291,18 +291,14 @@ impl InputDevice {
     fn is_keyboard(&self) -> bool {
         // Credit: https://github.com/mooz/xkeysnail/blob/bf3c93b4fe6efd42893db4e6588e5ef1c4909cfb/xkeysnail/input.py#L17-L32
         match self.device.supported_keys() {
-            Some(keys) => {
-                keys.contains(Key::KEY_SPACE)
-                && keys.contains(Key::KEY_A)
-                && keys.contains(Key::KEY_Z)
-            }
+            Some(keys) => keys.contains(Key::KEY_SPACE) && keys.contains(Key::KEY_A) && keys.contains(Key::KEY_Z),
             None => false,
         }
     }
 
     fn is_mouse(&self) -> bool {
         // Xremap doesn't support absolute device so will break them.
-        if self.device.supported_absolute_axes().is_some()  {
+        if self.device.supported_absolute_axes().is_some() {
             debug!("Ignoring absolute device {:18} {}", self.path.display(), self.device_name());
             return false;
         }
@@ -312,7 +308,7 @@ impl InputDevice {
     }
 
     pub fn print(&self) {
-        println!("{:18}: {}", self.path.display(), self.device_name())
+        info!("{:18}: {}", self.path.display(), self.device_name())
     }
 }
 
