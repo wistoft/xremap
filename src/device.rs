@@ -5,6 +5,7 @@ use anyhow::bail;
 use derive_where::derive_where;
 use evdev::uinput::{VirtualDevice, VirtualDeviceBuilder};
 use evdev::{AttributeSet, BusType, Device, FetchEventsSynced, InputId, Key, RelativeAxisType};
+use log::info;
 use nix::sys::inotify::{AddWatchFlags, InitFlags, Inotify};
 use std::collections::HashMap;
 use std::error::Error;
@@ -88,24 +89,24 @@ pub fn get_input_devices(
     let mut devices: Vec<_> = InputDevice::devices()?.collect();
     devices.sort();
 
-    println!("Selecting devices from the following list:");
-    println!("{}", SEPARATOR);
+    info!("Selecting devices from the following list:");
+    info!("{}", SEPARATOR);
     devices.iter().for_each(InputDevice::print);
-    println!("{}", SEPARATOR);
+    info!("{}", SEPARATOR);
 
     if device_opts.is_empty() {
         if mouse {
-            print!("Selected keyboards and mice automatically since --device options weren't specified");
+            info!("Selected keyboards and mice automatically since --device options weren't specified");
         } else {
-            print!("Selected keyboards automatically since --device options weren't specified");
+            info!("Selected keyboards automatically since --device options weren't specified");
         }
     } else {
-        print!("Selected devices matching {:?}", device_opts);
+        info!("Selected devices matching {:?}", device_opts);
     };
     if ignore_opts.is_empty() {
-        println!(":")
+        info!(":")
     } else {
-        println!(", ignoring {:?}:", ignore_opts);
+        info!(", ignoring {:?}:", ignore_opts);
     }
 
     let devices: Vec<_> = devices
@@ -118,7 +119,7 @@ pub fn get_input_devices(
         })
         .collect();
 
-    println!("{}", SEPARATOR);
+    info!("{}", SEPARATOR);
     if devices.is_empty() {
         if watch {
             println!("warning: No device was selected, but --watch is waiting for new devices.");
@@ -128,7 +129,7 @@ pub fn get_input_devices(
     } else {
         devices.iter().for_each(InputDevice::print);
     }
-    println!("{}", SEPARATOR);
+    info!("{}", SEPARATOR);
 
     Ok(devices.into_iter().map(From::from).collect())
 }
@@ -307,7 +308,7 @@ impl InputDevice {
     }
 
     pub fn print(&self) {
-        println!("{:18}: {}", self.path.display(), self.device_name())
+        info!("{:18}: {}", self.path.display(), self.device_name())
     }
 }
 
