@@ -768,6 +768,48 @@ fn test_any_key() {
     );
 }
 
+#[test]
+fn test_any_key_doesnt_match_modifier_1() {
+    assert_actions(
+        indoc! {"
+        keymap:
+          - remap:
+              ANY: null
+        "},
+        vec![
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Press)),
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Release)),
+        ],
+        vec![
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Press)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Release)),
+        ],
+    );
+}
+
+#[test]
+fn test_any_key_doesnt_match_modifier_2() {
+    assert_actions(
+        indoc! {"
+        keymap:
+          - remap:
+              Shift-ANY: null
+        "},
+        vec![
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_LEFTSHIFT, KeyValue::Press)),
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Press)),
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Release)),
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_LEFTSHIFT, KeyValue::Release)),
+        ],
+        vec![
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTSHIFT, KeyValue::Press)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Press)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Release)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTSHIFT, KeyValue::Release)),
+        ],
+    );
+}
+
 fn assert_actions(config_yaml: &str, events: Vec<Event>, actions: Vec<Action>) {
     assert_actions_with_current_application(config_yaml, None, events, actions);
 }
