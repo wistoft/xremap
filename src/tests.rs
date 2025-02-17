@@ -698,6 +698,125 @@ fn test_any_key_doesnt_match_modifier_2() {
     );
 }
 
+#[test]
+fn test_terminal_modifier() {
+    assert_actions(
+        indoc! {"
+        keymap:
+          - remap:
+              c_l: end
+        "},
+        vec![Event::KeyEvent(
+            get_input_device_info(),
+            KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Press),
+        )],
+        vec![
+            Action::KeyEvent(KeyEvent::new(Key::KEY_END, KeyValue::Press)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_END, KeyValue::Release)),
+            Action::Delay(Duration::from_nanos(0)),
+            Action::Delay(Duration::from_nanos(0)),
+        ],
+    )
+}
+
+#[test]
+fn test_terminal_modifier_with_other_modifier() {
+    assert_actions(
+        indoc! {"
+        keymap:
+          - remap:
+              c_l-c_r: end
+        "},
+        vec![
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Press)),
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_RIGHTCTRL, KeyValue::Press)),
+        ],
+        vec![
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Press)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Release)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_END, KeyValue::Press)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_END, KeyValue::Release)),
+            Action::Delay(Duration::from_nanos(0)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Press)),
+            Action::Delay(Duration::from_nanos(0)),
+        ],
+    )
+}
+
+#[test]
+fn test_terminal_modifier_sends_other_modifier_combo() {
+    assert_actions(
+        indoc! {"
+        keymap:
+          - remap:
+              alt_l-alt_r: c-x
+        "},
+        vec![
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_LEFTALT, KeyValue::Press)),
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_RIGHTALT, KeyValue::Press)),
+        ],
+        vec![
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTALT, KeyValue::Press)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Press)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTALT, KeyValue::Release)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_X, KeyValue::Press)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_X, KeyValue::Release)),
+            Action::Delay(Duration::from_nanos(0)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTALT, KeyValue::Press)),
+            Action::Delay(Duration::from_nanos(0)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Release)),
+        ],
+    )
+}
+
+#[test]
+fn test_terminal_modifier_sends_same_modifier_combo() {
+    assert_actions(
+        indoc! {"
+        keymap:
+          - remap:
+              c_r-c_l: c-x
+        "},
+        vec![
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_RIGHTCTRL, KeyValue::Press)),
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_LEFTCTRL, KeyValue::Press)),
+        ],
+        vec![
+            Action::KeyEvent(KeyEvent::new(Key::KEY_RIGHTCTRL, KeyValue::Press)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_X, KeyValue::Press)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_X, KeyValue::Release)),
+            Action::Delay(Duration::from_nanos(0)),
+            Action::Delay(Duration::from_nanos(0)),
+        ],
+    )
+}
+
+#[test]
+fn test_terminal_modifier_with_exact_match() {
+    assert_actions(
+        indoc! {"
+        keymap:
+          - exact_match: true
+            remap:
+              shift_r: c
+              win_l-shift_r: k
+        "},
+        vec![
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_LEFTMETA, KeyValue::Press)),
+            Event::KeyEvent(get_input_device_info(), KeyEvent::new(Key::KEY_RIGHTSHIFT, KeyValue::Press)),
+        ],
+        vec![
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTMETA, KeyValue::Press)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTMETA, KeyValue::Release)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_K, KeyValue::Press)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_K, KeyValue::Release)),
+            Action::Delay(Duration::from_nanos(0)),
+            Action::KeyEvent(KeyEvent::new(Key::KEY_LEFTMETA, KeyValue::Press)),
+            Action::Delay(Duration::from_nanos(0)),
+        ],
+    )
+}
+
 fn assert_actions(config_yaml: &str, events: Vec<Event>, actions: Vec<Action>) {
     assert_actions_with_current_application(config_yaml, None, events, actions);
 }

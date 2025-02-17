@@ -12,6 +12,7 @@ use crate::{config, Config};
 use evdev::Key;
 use lazy_static::lazy_static;
 use log::debug;
+use log::error;
 use nix::sys::time::TimeSpec;
 use nix::sys::timerfd::{Expiration, TimerFd, TimerSetTimeFlags};
 use std::cmp::Ordering;
@@ -141,6 +142,14 @@ impl EventHandler {
                 self.update_modifier(key, value);
                 continue;
             } else if MODIFIER_KEYS.contains(&key) {
+                // Let modifiers be eligible for matching in keymap. If a modifier is terminal,
+                //  its action will be emitted, but itself will not be emitted,
+                //  therefore it must not be added to self.modifiers.
+                if let Some(actions) = self.find_keymap(config, &key, device)? {
+                    self.dispatch_actions(&actions, &key)?;
+                    continue;
+                }
+
                 self.update_modifier(key, value);
             } else if is_pressed(value) {
                 if self.escape_next_key {
@@ -428,6 +437,18 @@ impl EventHandler {
                 .iter()
                 .flat_map(|map| map.get(key).cloned().unwrap_or_default())
                 .collect();
+
+            if config.virtual_modifiers.contains(&key) || MODIFIER_KEYS.contains(&key) {
+                if !entries.is_empty() {
+                    //User has specified a terminal modifier in a nested remap.
+                    error!("Terminal modifiers are not supported in nested remaps.")
+                }
+
+                // Terminal modifiers are not supported in nested remaps. They are simply ignored.
+                //  Because care should be taken not to remove the nested remap, when modifiers
+                //  have no match. All other keys remove the nested remap both with and without match.
+                return Ok(None);
+            }
 
             if !entries.is_empty() {
                 self.remove_override()?;
